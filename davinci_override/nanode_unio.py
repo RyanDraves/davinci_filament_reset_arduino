@@ -1,7 +1,5 @@
-from __future__ import annotations
 import RPi.GPIO as gpio
 from . import interrupt_guard
-from typing import Optional
 import time
 
 UNIO_STARTHEADER = 0x55
@@ -25,31 +23,31 @@ UNIO_PIN = 10
 
 usleep = lambda x: time.sleep(x / 1000000.0)
 
-def UNIO_OUTPUT() -> None:
+def UNIO_OUTPUT():
     gpio.setup(UNIO_PIN, gpio.OUT)
 
-def UNIO_INPUT() -> None:
+def UNIO_INPUT():
     gpio.setup(UNIO_PIN, gpio.IN)
 
 
-def set_bus(state: bool) -> None:
+def set_bus(state: bool):
   gpio.output(UNIO_PIN, gpio.HIGH)
 
-def read_bus() -> bool:
+def read_bus():
     return bool(gpio.input(UNIO_PIN))
 
 def unio_inter_command_gap():
   set_bus(1)
   usleep(UNIO_TSS + UNIO_FUDGE_FACTOR)
 
-def unio_standby_pulse() -> None:
+def unio_standby_pulse():
   set_bus(0)
   UNIO_OUTPUT()
   usleep(UNIO_TSS + UNIO_FUDGE_FACTOR)
   set_bus(1)
   usleep(UNIO_TSTBY + UNIO_FUDGE_FACTOR)
 
-def rwbit(w: bool) -> bool:
+def rwbit(w: bool):
   set_bus(not w)
   usleep(UNIO_QUARTER_BIT)
   a = read_bus()
@@ -60,13 +58,13 @@ def rwbit(w: bool) -> bool:
   usleep(UNIO_QUARTER_BIT)
   return b and not a
 
-def read_bit() -> bool:
+def read_bit():
   UNIO_INPUT()
   b = rwbit(1)
   UNIO_OUTPUT()
   return b
 
-def send_byte(b: int, mak: bool) -> bool:
+def send_byte(b: int, mak: bool):
     for _ in range(8):
         rwbit(b & 0x80)
         b = b << 1
@@ -74,7 +72,7 @@ def send_byte(b: int, mak: bool) -> bool:
     rwbit(mak)
     return read_bit()
 
-def read_byte(mak: bool) -> int:
+def read_byte(mak: bool):
     data = 0
     UNIO_INPUT()
     for _ in range(8):
@@ -85,14 +83,14 @@ def read_byte(mak: bool) -> int:
         return data
     raise ValueError('NoSAK on read')
 
-def unio_send(data: list[int], length: int, end: bool) -> bool:
+def unio_send(data, length: int, end: bool):
     for i, word in enumerate(data):
         last_byte = end and (i + 1) == len(data)
         if not send_byte(word, last_byte):
             return False
     return True
 
-def unio_read(length: int) -> list[int]:
+def unio_read(length: int):
     data = []
     for i in range(length):
         last_byte = (i + 1) == length
@@ -100,17 +98,17 @@ def unio_read(length: int) -> list[int]:
         data.append(byte)
     return data
 
-def unio_start_header() -> None:
+def unio_start_header():
   set_bus(0)
   usleep(UNIO_THDR + UNIO_FUDGE_FACTOR)
   send_byte(UNIO_STARTHEADER, True)
 
 class NanodeUNIO:
-    def __init__(self, address: int) -> None:
+    def __init__(self, address: int):
         self._addr = address
 
-    def read(self, address: int, length: int) -> list[int]:
-        cmd: list[int] = [self._addr, UNIO_READ, address >> 8, address & 0xFF]
+    def read(self, address: int, length: int):
+        cmd = [self._addr, UNIO_READ, address >> 8, address & 0xFF]
         unio_standby_pulse()
         with interrupt_guard.InterruptGuard():
             unio_start_header()
@@ -119,7 +117,7 @@ class NanodeUNIO:
 
             return unio_read(length)
 
-    def start_write(self, buffer: list[int], address: int, length: int) -> bool:
+    def start_write(self, buffer, address: int, length: int):
         if ((address & 0x0f) + length) > 16:
             return False  # would cross page boundary
         
@@ -132,21 +130,21 @@ class NanodeUNIO:
 
             return unio_send(buffer, length, True)
 
-    def enable_write(self) -> bool:
+    def enable_write(self):
         cmd = [self._addr, UNIO_WREN]
         unio_standby_pulse()
         with interrupt_guard.InterruptGuard():
             unio_start_header()
             return unio_send(cmd, 2, True)
 
-    def disable_write(self) -> bool:
+    def disable_write(self):
         cmd = [self._addr, UNIO_WRDI]
         unio_standby_pulse()
         with interrupt_guard.InterruptGuard():
             unio_start_header()
             return unio_send(cmd, 2, True)
 
-    def read_status(self) -> int:
+    def read_status(self):
         cmd = [self._addr, UNIO_RDSR]
         unio_standby_pulse()
         with interrupt_guard.InterruptGuard():
@@ -157,14 +155,14 @@ class NanodeUNIO:
             status = unio_read(1)
             return status[0]
 
-    def write_status(self, status: int) -> bool:
+    def write_status(self, status: int):
         cmd = [self._addr, UNIO_WRSR, status]
         unio_standby_pulse()
         with interrupt_guard.InterruptGuard():
             unio_start_header()
             return unio_send(cmd, 3, True)
 
-    def await_write_complete(self) -> bool:
+    def await_write_complete(self):
         cmd = [self._addr, UNIO_RDSR]
         unio_standby_pulse()
         status = 0
@@ -179,7 +177,7 @@ class NanodeUNIO:
                 status = unio_read(1)[0]
         return True
 
-    def simple_write(self, buffer: list[int], address: int, length: int) -> bool:
+    def simple_write(self, buffer, address: int, length: int):
         while length > 0:
             wlen = length
             if ((address & 0x0F) + wlen) > 16:

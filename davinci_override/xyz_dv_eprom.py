@@ -1,5 +1,4 @@
 # from RPi import GPIO as gpio
-from __future__ import annotations
 import RPi.GPIO as gpio
 
 from . import nanode_unio
@@ -23,14 +22,14 @@ SN = 0x18	 # 12 Bytes
 CRC = 0x24 # 2 Bytes
 LEN2 = 0x34 # 4 Bytes
 
-def increment_serial(buffer: list[int], address: int, length: int) -> int:
+def increment_serial(buffer, address: int, length: int):
     buf = bytes(buffer)
     serial = int.from_bytes(buf, byteorder='big')
     new_serial = serial + 1
     logging.info(f'Read serial of {serial}')
     return new_serial
 
-def dump_eeprom(unio: nanode_unio.NanodeUNIO, address: int, length: int) -> None:
+def dump_eeprom(unio: nanode_unio.NanodeUNIO, address: int, length: int):
     unio = nanode_unio.NanodeUNIO(NANODE_MAC_DEVICE)
 
     buf = unio.read(address, length)
