@@ -1,5 +1,5 @@
 import RPi.GPIO as gpio
-from . import interrupt_guard
+from davinci_override import interrupt_guard
 import time
 
 UNIO_STARTHEADER = 0x55

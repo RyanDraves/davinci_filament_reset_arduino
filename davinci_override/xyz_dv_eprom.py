@@ -1,7 +1,7 @@
 # from RPi import GPIO as gpio
 import RPi.GPIO as gpio
 
-from . import nanode_unio
+from davinci_override import nanode_unio
 import logging
 import time
 
