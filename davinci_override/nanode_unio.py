@@ -19,7 +19,7 @@ UNIO_THDR    = 5
 UNIO_QUARTER_BIT = 10
 UNIO_FUDGE_FACTOR = 5
 
-UNIO_PIN = 10
+UNIO_PIN = 8
 
 usleep = lambda x: time.sleep(x / 1000000.0)
 
@@ -31,7 +31,7 @@ def UNIO_INPUT():
 
 
 def set_bus(state: bool):
-  gpio.output(UNIO_PIN, gpio.HIGH)
+    gpio.output(UNIO_PIN, state)
 
 def read_bus():
     return bool(gpio.input(UNIO_PIN))
@@ -106,6 +106,7 @@ def unio_start_header():
 class NanodeUNIO:
     def __init__(self, address: int):
         self._addr = address
+        UNIO_OUTPUT()
 
     def read(self, address: int, length: int):
         cmd = [self._addr, UNIO_READ, address >> 8, address & 0xFF]

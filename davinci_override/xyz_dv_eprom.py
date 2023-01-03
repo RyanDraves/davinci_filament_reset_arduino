@@ -76,48 +76,52 @@ sr = 0
 unio = nanode_unio.NanodeUNIO(NANODE_MAC_DEVICE)
 
 if __name__ == '__main__':
+    logging.basicConfig(level=logging.DEBUG)
+
     gpio.setmode(gpio.BOARD)
 
-    while True:
-        logging.info('Testing connection to Da Vinci EEPROM chip')
-        if unio.read_status():
-            break
-        time.sleep(1)
+    try:
+        while True:
+            logging.info('Testing connection to Da Vinci EEPROM chip')
+            if unio.read_status():
+                break
+            time.sleep(1)
 
-  
-    logging.info("Da Vinci EEPROM found...")
-    logging.info("Reading the Davinci EEPROM Contents...")
-    dump_eeprom(unio, 0,128)
+    
+        logging.info("Da Vinci EEPROM found...")
+        logging.info("Reading the Davinci EEPROM Contents...")
+        dump_eeprom(unio, 0,128)
+            
+        # Read the serial number
+        buf = unio.read(SN, 12)
+        # Increment the serial number
+        new_serial = increment_serial(buf, 0, 12)	
+
+        logging.info("Press enter to update EEPROM...")
+        input()
         
-    # Read the serial number
-    buf = unio.read(SN, 12)
-    # Increment the serial number
-    new_serial = increment_serial(buf, 0, 12)	
+        logging.info("Updating EEPROM...")
+        unio.simple_write(x, TOTALLEN, 4)
+        unio.simple_write(x, NEWLEN, 4)
+        unio.simple_write(et, HEADTEMP, 2) # extruder temp
+        unio.simple_write(bt, BEDTEMP, 2) # bed temp
+        unio.simple_write(mt, MATERIAL, 1) # Material
+        
+        # Write the serial number
+        unio.simple_write(buf, SN, 12) #Serial Number
+        unio.simple_write(x, LEN2, 4)
+        # same block from offset 0 is offset 64 bytes
+        unio.simple_write(x, 64 + TOTALLEN, 4)
+        unio.simple_write(x, 64 + NEWLEN, 4)
+        unio.simple_write(et,64 + HEADTEMP, 2) # extruder temp
+        unio.simple_write(bt,64 + BEDTEMP, 2) # bed temp
+        unio.simple_write(mt,64 + MATERIAL, 1) # Material
+        # Write the serial number
+        unio.simple_write(buf, 64 + SN, 12) #Serial Number
+        unio.simple_write(x, 64 + LEN2, 4)
 
-    logging.info("Press enter to update EEPROM...")
-    input()
-    
-    logging.info("Updating EEPROM...")
-    unio.simple_write(x, TOTALLEN, 4)
-    unio.simple_write(x, NEWLEN, 4)
-    unio.simple_write(et, HEADTEMP, 2) # extruder temp
-    unio.simple_write(bt, BEDTEMP, 2) # bed temp
-    unio.simple_write(mt, MATERIAL, 1) # Material
-    
-    # Write the serial number
-    unio.simple_write(buf, SN, 12) #Serial Number
-    unio.simple_write(x, LEN2, 4)
-    # same block from offset 0 is offset 64 bytes
-    unio.simple_write(x, 64 + TOTALLEN, 4)
-    unio.simple_write(x, 64 + NEWLEN, 4)
-    unio.simple_write(et,64 + HEADTEMP, 2) # extruder temp
-    unio.simple_write(bt,64 + BEDTEMP, 2) # bed temp
-    unio.simple_write(mt,64 + MATERIAL, 1) # Material
-    # Write the serial number
-    unio.simple_write(buf, 64 + SN, 12) #Serial Number
-    unio.simple_write(x, 64 + LEN2, 4)
+        logging.info("Dumping Content after modification...")
+        dump_eeprom(0, 128)
 
-    logging.info("Dumping Content after modification...")
-    dump_eeprom(0, 128)
-
-    gpio.cleanup()
+    finally:
+        gpio.cleanup()
